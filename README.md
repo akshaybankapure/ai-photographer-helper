@@ -1,0 +1,1 @@
+# ai-photographer-helper
