@@ -1,0 +1,451 @@
+openapi: 3.0.3
+info:
+  title: AI Photographer Helper API
+  version: 1.0.0
+  description: |
+    REST API for analyzing photos, suggesting composition and lighting
+    improvements, and managing shoot sessions.
+  contact:
+    name: AI Photographer Helper
+    url: https://example.com
+servers:
+  - url: https://api.aiphotographer.example/v1
+    description: Production
+  - url: http://localhost:8080/v1
+    description: Local development
+tags:
+  - name: Analysis
+    description: Photo analysis and scoring
+  - name: Suggestions
+    description: Composition, lighting, and style guidance
+  - name: Sessions
+    description: Shoot session management
+  - name: Presets
+    description: Style and lighting presets
+paths:
+  /analyze:
+    post:
+      tags: [Analysis]
+      summary: Analyze a photo
+      description: Upload or reference an image and receive quality scores, scene tags, and issue flags.
+      operationId: analyzePhoto
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+            example:
+              image_url: https://cdn.example.com/shoots/portrait-01.jpg
+              options:
+                include_faces: true
+                include_histogram: false
+      responses:
+        '200':
+          description: Analysis complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Image too large
+
+  /suggest/composition:
+    post:
+      tags: [Suggestions]
+      summary: Get composition suggestions
+      description: Returns framing, rule-of-thirds, leading-line, and crop recommendations for a photo.
+      operationId: suggestComposition
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuggestionRequest'
+      responses:
+        '200':
+          description: Suggestions generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompositionSuggestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /suggest/lighting:
+    post:
+      tags: [Suggestions]
+      summary: Get lighting suggestions
+      description: Recommends exposure, white-balance, and lighting setup changes.
+      operationId: suggestLighting
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuggestionRequest'
+      responses:
+        '200':
+          description: Lighting guidance generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LightingSuggestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /presets:
+    get:
+      tags: [Presets]
+      summary: List style presets
+      description: Returns available creative presets (portrait, landscape, night, product, etc.).
+      operationId: listPresets
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [portrait, landscape, night, product, street, all]
+          description: Filter presets by category
+      responses:
+        '200':
+          description: Preset list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresetListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Create a shoot session
+      description: Creates a session to group analyses and suggestions for a shoot.
+      operationId: createSession
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [Sessions]
+      summary: List shoot sessions
+      operationId: listSessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated session list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/{sessionId}:
+    get:
+      tags: [Sessions]
+      summary: Get a shoot session
+      operationId: getSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Sessions]
+      summary: Delete a shoot session
+      operationId: deleteSession
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Session deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: API token issued from the developer dashboard.
+
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Session identifier
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    AnalyzeRequest:
+      type: object
+      required: [image_url]
+      properties:
+        image_url:
+          type: string
+          format: uri
+        session_id:
+          type: string
+          format: uuid
+        options:
+          type: object
+          properties:
+            include_faces:
+              type: boolean
+              default: true
+            include_histogram:
+              type: boolean
+              default: false
+
+    AnalyzeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        scores:
+          type: object
+          properties:
+            overall:
+              type: number
+              minimum: 0
+              maximum: 100
+            sharpness:
+              type: number
+            exposure:
+              type: number
+            composition:
+              type: number
+        scene_tags:
+          type: array
+          items:
+            type: string
+          example: [portrait, outdoor, golden-hour]
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+              severity:
+                type: string
+                enum: [info, warn, error]
+
+    SuggestionRequest:
+      type: object
+      required: [image_url]
+      properties:
+        image_url:
+          type: string
+          format: uri
+        session_id:
+          type: string
+          format: uuid
+        preset_id:
+          type: string
+
+    CompositionSuggestionResponse:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              detail:
+                type: string
+              confidence:
+                type: number
+        suggested_crop:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+
+    LightingSuggestionResponse:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              detail:
+                type: string
+        exposure_delta_ev:
+          type: number
+        white_balance_k:
+          type: integer
+
+    Preset:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+
+    PresetListResponse:
+      type: object
+      properties:
+        presets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Preset'
+
+    CreateSessionRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        location:
+          type: string
+        notes:
+          type: string
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        location:
+          type: string
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        analysis_count:
+          type: integer
+
+    SessionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        next_cursor:
+          type: string
+          nullable: true
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Photographer Helper — API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #0b1215;
+      --bg: #101a1f;
+      --bg-elevated: #162229;
+      --line: rgba(168, 214, 206, 0.14);
+      --text: #e8f2ef;
+      --muted: #8aa39b;
+      --accent: #3dcfb6;
+      --accent-dim: rgba(61, 207, 182, 0.14);
+      --get: #5ec8ff;
+      --post: #3dcfb6;
+      --delete: #ff7b72;
+      --warn: #f0c674;
+      --radius: 10px;
+      --max: 1100px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Sora", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(61, 207, 182, 0.16), transparent 55%),
+        radial-gradient(900px 500px at 90% 0%, rgba(94, 200, 255, 0.1), transparent 50%),
+        linear-gradient(180deg, var(--bg-deep), var(--bg) 40%, #0d161a);
+      min-height: 100vh;
+      line-height: 1.55;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      z-index: 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(100% - 2rem, var(--max));
+      margin: 0 auto;
+    }
+
+    header.site {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .mark {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 8px;
+      background:
+        conic-gradient(from 210deg, var(--accent), #5ec8ff, transparent 70%),
+        var(--bg-elevated);
+      border: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mark::after {
+      content: "";
+      position: absolute;
+      inset: 6px;
+      border-radius: 50%;
+      border: 2px solid rgba(232, 242, 239, 0.85);
+      box-shadow: inset 0 0 0 3px var(--bg-elevated);
+    }
+
+    nav.toc {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+
+    nav.toc a { color: var(--muted); }
+    nav.toc a:hover { color: var(--text); text-decoration: none; }
+
+    .hero {
+      padding: 4.5rem 0 3.25rem;
+      animation: rise 0.7s ease-out both;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      font-weight: 700;
+      max-width: 14ch;
+    }
+
+    .hero p {
+      margin-top: 1rem;
+      color: var(--muted);
+      max-width: 38rem;
+      font-size: 1.05rem;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: 1px solid transparent;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); text-decoration: none; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #06201a;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    section {
+      padding: 2.5rem 0;
+      border-top: 1px solid var(--line);
+      animation: rise 0.8s ease-out both;
+    }
+
+    section:nth-of-type(2) { animation-delay: 0.08s; }
+    section:nth-of-type(3) { animation-delay: 0.14s; }
+    section:nth-of-type(4) { animation-delay: 0.2s; }
+
+    .section-head {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-head h2 {
+      font-size: 1.35rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 40rem;
+    }
+
+    .auth-box, .endpoint, .code-panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+
+    .auth-box {
+      padding: 1.25rem 1.35rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    code, .mono {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.86em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .pill-get { color: var(--get); background: rgba(94, 200, 255, 0.12); }
+    .pill-post { color: var(--post); background: var(--accent-dim); }
+    .pill-delete { color: var(--delete); background: rgba(255, 123, 114, 0.12); }
+
+    .endpoint-list {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .endpoint {
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+    }
+
+    .endpoint:hover { border-color: rgba(61, 207, 182, 0.35); }
+
+    .endpoint summary {
+      list-style: none;
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.85rem;
+      align-items: center;
+      padding: 1rem 1.15rem;
+    }
+
+    .endpoint summary::-webkit-details-marker { display: none; }
+
+    .endpoint .path {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.92rem;
+    }
+
+    .endpoint .summary-text {
+      color: var(--muted);
+      font-size: 0.88rem;
+      text-align: right;
+    }
+
+    .endpoint-body {
+      border-top: 1px solid var(--line);
+      padding: 1.1rem 1.15rem 1.25rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .endpoint-body p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .code-panel {
+      overflow: hidden;
+    }
+
+    .code-panel .bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.55rem 0.9rem;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    pre {
+      margin: 0;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.8rem;
+      line-height: 1.65;
+      color: #d7ebe5;
+    }
+
+    .k { color: #5ec8ff; }
+    .s { color: #3dcfb6; }
+    .n { color: #f0c674; }
+    .c { color: #6f8890; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.7rem 0.85rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th { color: var(--muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    footer {
+      padding: 2.5rem 0 3rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 760px) {
+      nav.toc { display: none; }
+      .hero { padding-top: 3rem; }
+      .endpoint summary {
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto auto;
+      }
+      .endpoint .summary-text {
+        grid-column: 2;
+        text-align: left;
+      }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="site">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span>AI Photographer Helper</span>
+      </div>
+      <nav class="toc" aria-label="On this page">
+        <a href="#auth">Auth</a>
+        <a href="#endpoints">Endpoints</a>
+        <a href="#errors">Errors</a>
+        <a href="#spec">Spec</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <h1>AI Photographer Helper</h1>
+      <p>Analyze photos, get composition and lighting guidance, and manage shoot sessions through a simple REST API.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#endpoints">Browse endpoints</a>
+        <a class="btn btn-ghost" href="./openapi.yaml">OpenAPI YAML</a>
+      </div>
+    </div>
+
+    <section id="auth">
+      <div class="section-head">
+        <h2>Authentication</h2>
+        <p>All requests require a Bearer token issued from the developer dashboard.</p>
+      </div>
+      <div class="auth-box">
+        <div><span class="pill pill-post">Header</span></div>
+        <code>Authorization: Bearer &lt;your_api_token&gt;</code>
+        <p style="color: var(--muted); font-size: 0.9rem;">Base URL: <code>https://api.aiphotographer.example/v1</code></p>
+      </div>
+    </section>
+
+    <section id="endpoints">
+      <div class="section-head">
+        <h2>Endpoints</h2>
+        <p>Core routes for analysis, suggestions, presets, and sessions.</p>
+      </div>
+
+      <div class="endpoint-list">
+        <details class="endpoint" open>
+          <summary>
+            <span class="pill pill-post">POST</span>
+            <span class="path">/analyze</span>
+            <span class="summary-text">Analyze a photo</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Upload or reference an image and receive quality scores, scene tags, and issue flags.</p>
+            <div class="grid-2">
+              <div class="code-panel">
+                <div class="bar"><span>Request</span><span>JSON</span></div>
+                <pre><span class="c">// POST /v1/analyze</span>
+{
+  <span class="k">"image_url"</span>: <span class="s">"https://cdn.example.com/portrait-01.jpg"</span>,
+  <span class="k">"options"</span>: {
+    <span class="k">"include_faces"</span>: <span class="n">true</span>
+  }
+}</pre>
+              </div>
+              <div class="code-panel">
+                <div class="bar"><span>Response</span><span>200</span></div>
+                <pre>{
+  <span class="k">"scores"</span>: {
+    <span class="k">"overall"</span>: <span class="n">82</span>,
+    <span class="k">"sharpness"</span>: <span class="n">88</span>,
+    <span class="k">"exposure"</span>: <span class="n">74</span>
+  },
+  <span class="k">"scene_tags"</span>: [<span class="s">"portrait"</span>, <span class="s">"golden-hour"</span>]
+}</pre>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-post">POST</span>
+            <span class="path">/suggest/composition</span>
+            <span class="summary-text">Composition suggestions</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Returns framing, rule-of-thirds, leading-line, and crop recommendations for a photo.</p>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-post">POST</span>
+            <span class="path">/suggest/lighting</span>
+            <span class="summary-text">Lighting suggestions</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Recommends exposure, white-balance, and lighting setup changes.</p>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-get">GET</span>
+            <span class="path">/presets</span>
+            <span class="summary-text">List style presets</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Optional query: <code>?category=portrait|landscape|night|product|street|all</code></p>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-post">POST</span>
+            <span class="path">/sessions</span>
+            <span class="summary-text">Create a shoot session</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Groups analyses and suggestions under a named shoot. Also supports <code>GET</code>, <code>GET /{id}</code>, and <code>DELETE /{id}</code>.</p>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-get">GET</span>
+            <span class="path">/sessions</span>
+            <span class="summary-text">List shoot sessions</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Paginated with <code>limit</code> (1–100, default 20) and optional <code>cursor</code>.</p>
+          </div>
+        </details>
+
+        <details class="endpoint">
+          <summary>
+            <span class="pill pill-delete">DELETE</span>
+            <span class="path">/sessions/{sessionId}</span>
+            <span class="summary-text">Delete a session</span>
+          </summary>
+          <div class="endpoint-body">
+            <p>Permanently removes the session and its linked analysis references. Returns <code>204</code>.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="errors">
+      <div class="section-head">
+        <h2>Errors</h2>
+        <p>Failures share one envelope so clients can handle them consistently.</p>
+      </div>
+      <div class="grid-2">
+        <div class="code-panel">
+          <div class="bar"><span>Error body</span><span>JSON</span></div>
+          <pre>{
+  <span class="k">"error"</span>: {
+    <span class="k">"code"</span>: <span class="s">"invalid_request"</span>,
+    <span class="k">"message"</span>: <span class="s">"image_url is required"</span>,
+    <span class="k">"request_id"</span>: <span class="s">"req_01HXYZ..."</span>
+  }
+}</pre>
+        </div>
+        <div class="auth-box" style="padding: 0; overflow: hidden;">
+          <table>
+            <thead>
+              <tr><th>Status</th><th>Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>400</code></td><td>Invalid request</td></tr>
+              <tr><td><code>401</code></td><td>Missing / invalid token</td></tr>
+              <tr><td><code>404</code></td><td>Not found</td></tr>
+              <tr><td><code>413</code></td><td>Image too large</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="spec">
+      <div class="section-head">
+        <h2>Machine-readable spec</h2>
+        <p>Use the OpenAPI file for codegen, mocks, and contract tests.</p>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-ghost" href="./openapi.yaml">docs/openapi.yaml</a>
+        <a class="btn btn-ghost" href="./API.md">docs/API.md</a>
+      </div>
+    </section>
+
+    <footer>
+      AI Photographer Helper API · v1.0.0
+    </footer>
+  </div>
+</body>
+</html>
